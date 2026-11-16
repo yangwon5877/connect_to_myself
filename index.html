@@ -114,10 +114,11 @@
       <button onclick="logoutHost()" class="text-xs bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg font-semibold">로그아웃</button>
     </div>
 
-    <!-- QR 코드 영역 -->
+    <!-- QR 코드 영역 (터치 시 확대 기능 추가) -->
     <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center mb-6">
-      <img id="qrImage" src="" alt="QR코드" class="w-44 h-44 mx-auto bg-white p-2 border rounded-xl shadow-sm mb-2">
-      <p class="text-xs text-slate-400 break-all" id="qrUrlText"></p>
+      <img id="qrImage" src="" alt="QR코드" onclick="toggleQrModal(true)" class="w-44 h-44 mx-auto bg-white p-2 border rounded-xl shadow-sm mb-2 cursor-pointer transition transform hover:scale-105" title="터치하면 확대됩니다">
+      <p class="text-xs text-slate-400 mt-1">QR을 터치하면 크게 확대됩니다</p>
+      <p class="text-xs text-slate-400 break-all mt-1" id="qrUrlText"></p>
       <button onclick="copyUrl()" class="mt-3 text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg font-semibold">참석 링크 복사</button>
     </div>
 
@@ -165,11 +166,21 @@
     </div>
   </div>
 
+  <!-- QR 확대 모달 창 -->
+  <div id="qrModal" onclick="toggleQrModal(false)" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6">
+    <div onclick="event.stopPropagation()" class="bg-white rounded-3xl p-6 max-w-sm w-full text-center space-y-4">
+      <h3 class="text-xl font-bold text-slate-900">가족 참석 체크 QR코드</h3>
+      <p class="text-xs text-slate-500">스마트폰 기본 카메라로 스캔해 주세요.</p>
+      <img id="qrModalImage" src="" alt="확대 QR코드" class="w-64 h-64 mx-auto border p-2 rounded-2xl bg-white shadow-inner">
+      <button onclick="toggleQrModal(false)" class="w-full bg-slate-900 text-white font-bold py-3 rounded-xl text-sm">닫기</button>
+    </div>
+  </div>
+
 
   <script>
     const counts = { adult: 1, high: 0, middle: 0, elem: 0, child: 0 };
-    const STORAGE_KEY = 'simple_attendance_list_v2';
-    const HOST_PW = '000407'; // 주최자 비밀번호 변경 완료
+    const STORAGE_KEY = 'family_attendance_sync_v3';
+    const HOST_PW = '000407';
 
     window.onload = () => {
       document.getElementById('guestView').classList.remove('hidden');
@@ -190,6 +201,7 @@
       if (!name) return alert('대표자 이름을 입력해 주세요.');
       if (total === 0) return alert('참석 인원을 1명 이상 선택해 주세요.');
 
+      // 실시간 반영을 위해 스토리지 저장 및 동기화 처리
       const list = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
       list.unshift({
         id: Date.now(),
@@ -212,7 +224,9 @@
         document.getElementById('hostView').classList.remove('hidden');
         
         const currentUrl = window.location.href.split('?')[0];
-        document.getElementById('qrImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(currentUrl)}`;
+        const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(currentUrl)}`;
+        document.getElementById('qrImage').src = qrSrc;
+        document.getElementById('qrModalImage').src = qrSrc;
         document.getElementById('qrUrlText').innerText = currentUrl;
         
         renderHost();
@@ -231,12 +245,12 @@
       document.getElementById('familyTotalCount').innerText = `총 ${list.length}가족`;
 
       const sums = list.reduce((acc, cur) => {
-        acc.total += cur.total;
-        acc.adult += cur.adult;
-        acc.high += cur.high;
-        acc.middle += cur.middle;
-        acc.elem += cur.elem;
-        acc.child += cur.child;
+        acc.total += Number(cur.total) || 0;
+        acc.adult += Number(cur.adult) || 0;
+        acc.high += Number(cur.high) || 0;
+        acc.middle += Number(cur.middle) || 0;
+        acc.elem += Number(cur.elem) || 0;
+        acc.child += Number(cur.child) || 0;
         return acc;
       }, { total: 0, adult: 0, high: 0, middle: 0, elem: 0, child: 0 });
 
@@ -251,7 +265,7 @@
       }
 
       container.innerHTML = list.map(item => `
-        <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center">
+        <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center shadow-sm">
           <div>
             <div class="flex items-center space-x-2">
               <span class="font-bold text-slate-900">${item.name} 가족</span>
@@ -264,6 +278,16 @@
           <span class="bg-blue-100 text-blue-700 font-bold px-3 py-1 rounded-lg text-xs">${item.total}명</span>
         </div>
       `).join('');
+    }
+
+    // QR 확대/축소 모달 제어 함수
+    function toggleQrModal(show) {
+      const modal = document.getElementById('qrModal');
+      if (show) {
+        modal.classList.remove('hidden');
+      } else {
+        modal.classList.add('hidden');
+      }
     }
 
     function copyUrl() {
