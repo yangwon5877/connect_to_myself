@@ -114,7 +114,7 @@
       <button onclick="logoutHost()" class="text-xs bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg font-semibold">로그아웃</button>
     </div>
 
-    <!-- QR 코드 영역 (터치 시 확대 기능 추가) -->
+    <!-- QR 코드 영역 -->
     <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center mb-6">
       <img id="qrImage" src="" alt="QR코드" onclick="toggleQrModal(true)" class="w-44 h-44 mx-auto bg-white p-2 border rounded-xl shadow-sm mb-2 cursor-pointer transition transform hover:scale-105" title="터치하면 확대됩니다">
       <p class="text-xs text-slate-400 mt-1">QR을 터치하면 크게 확대됩니다</p>
@@ -179,7 +179,7 @@
 
   <script>
     const counts = { adult: 1, high: 0, middle: 0, elem: 0, child: 0 };
-    const STORAGE_KEY = 'family_attendance_sync_v3';
+    const STORAGE_KEY = 'family_attendance_sync_v4';
     const HOST_PW = '000407';
 
     window.onload = () => {
@@ -201,12 +201,15 @@
       if (!name) return alert('대표자 이름을 입력해 주세요.');
       if (total === 0) return alert('참석 인원을 1명 이상 선택해 주세요.');
 
-      // 실시간 반영을 위해 스토리지 저장 및 동기화 처리
       const list = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
       list.unshift({
         id: Date.now(),
         name,
-        ...counts,
+        adult: counts.adult,
+        high: counts.high,
+        middle: counts.middle,
+        elem: counts.elem,
+        child: counts.child,
         total,
         time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
       });
@@ -272,7 +275,7 @@
               <span class="text-xs text-slate-400">${item.time}</span>
             </div>
             <p class="text-xs text-slate-600 mt-1">
-              어른 <b>${item.adult}</b> · 고등 <b>${item.high}</b> · 중등 <b>${item.middle}</b> · 초등 <b>${item.elem}</b> · 아동 <b>${item.child}</b>
+              어른 <b>${item.adult || 0}</b> · 고등 <b>${item.high || 0}</b> · 중등 <b>${item.middle || 0}</b> · 초등 <b>${item.elem || 0}</b> · 아동 <b>${item.child || 0}</b>
             </p>
           </div>
           <span class="bg-blue-100 text-blue-700 font-bold px-3 py-1 rounded-lg text-xs">${item.total}명</span>
@@ -280,7 +283,6 @@
       `).join('');
     }
 
-    // QR 확대/축소 모달 제어 함수
     function toggleQrModal(show) {
       const modal = document.getElementById('qrModal');
       if (show) {
